@@ -3,7 +3,8 @@ name: Compilar Gengar IA
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -11,6 +12,7 @@ permissions:
 
 jobs:
   build:
+    name: Construir APK Android
     runs-on: ubuntu-latest
 
     steps:
@@ -23,15 +25,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - 
-
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v4
         with:
           cmdline-tools-version: 14742923
           packages: ''
 
-      - name: Instalar SDK 35
+      - name: Instalar SDK Android 35
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
@@ -49,21 +49,28 @@ jobs:
             -type f -name settings.gradle -print -quit)
 
           if [ -z "$SETTINGS_FILE" ]; then
-            echo "settings.gradle não encontrado!"
+            echo "ERRO: settings.gradle não encontrado"
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$SETTINGS_FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
+      - name: Verificar estrutura
+        run: |
+          echo "Projeto: $PROJECT_DIR"
+          ls -la "$PROJECT_DIR"
+          test -f "$PROJECT_DIR/app/build.gradle"
+          test -f "$PROJECT_DIR/app/src/main/AndroidManifest.xml"
+
       - name: Compilar APK
         run: |
           gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug
 
-      - name: Disponibilizar APK
+      - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
           name: Gengar-IA-APK
           path: '**/app/build/outputs/apk/debug/*.apk'
           if-no-files-found: error
-          
+          retention-days: 7
